@@ -1,15 +1,8 @@
-terraform {
-  backend "remote" {
-    organization = "example-organization"
-    
-    workspaces {
-      name = "example-workspace"
-    }
-  }
+resource "random_pet" "rg_name" {
+  prefix = var.resource_group_name_prefix
 }
 
-resource "null_resource" "example" {
-  triggers = {
-    value = "A example resource that does nothing!"
-  }
+resource "azurerm_resource_group" "rg" {
+  location = var.resource_group_location
+  name     = random_pet.rg_name.id
 }
