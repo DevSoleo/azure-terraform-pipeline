@@ -1,24 +1,21 @@
-name: 'Terraform'
- 
+name: Terraform
 on:
-  push:
-    branches:
-    - main
-  pull_request:
- 
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
 jobs:
+  publish:
+    runs-on: ubuntu-latest
   terraform:
-    name: 'Terraform'
+    name: Terraform
     runs-on: ubuntu-latest
     environment: production
- 
-    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
-    defaults:
-      run:
-        shell: bash
- 
-    steps:
-    # Checkout the repository to the GitHub Actions runner
+    
+defaults:
+    run:
+      shell: bash
+    steps:
     - name: Check out repository
       uses: actions/checkout@v2
 
@@ -27,16 +24,14 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
         enable-AzPSSession: true
- 
-    - name: 'Terraform Format'
+    - name: TerraformFormat
       uses: hashicorp/terraform-github-actions@master
       with:
-        tf_actions_version: 0.14.8
-        tf_actions_subcommand: 'fmt'
-        tf_actions_working_dir: "./terraform"
-         
-    - name: 'Terraform Init'
-      uses: hashicorp/terraform-github-actions@master
+        tf_actions_version: 0.14.8
+        tf_actions_subcommand: 'fmt'
+        tf_actions_working_dir: "./terraform"
+    - name: TerraformInit
+    uses: hashicorp/terraform-github-actions@master
       with:
         tf_actions_version: 0.14.8
         tf_actions_subcommand: 'init'
