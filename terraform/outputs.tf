@@ -1,5 +1,5 @@
 output "resource_group_name" {
-  value = "testouioui"
+  value = "test"
 }
 
 output "public_ip_address" {
