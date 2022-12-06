@@ -1,119 +1,131 @@
-terraform {
-  backend "azurerm" {
-    resource_group_name  = "tamopstfstates"
-    storage_account_name = "tfstatedevops"
-    container_name       = "terraformgithubexample"
-    key                  = "terraformgithubexample.tfstate"
-  }
+resource "random_pet" "rg_name" {
+  prefix = var.resource_group_name_prefix
 }
- 
-provider "azurerm" {
-  # The "feature" block is required for AzureRM provider 2.x.
-  # If you're using version 1.x, the "features" block is not allowed.
-  version = "~>2.0"
-  features {}
-}
- 
-data "azurerm_client_config" "current" {}
-
-#Création de mon Ressources groupe
 
 resource "azurerm_resource_group" "rg" {
-  name     = "rg"
-  location = "West Europe"
+  location = var.resource_group_location
+  name     = random_pet.rg_name.id
 }
 
-#Création de mon réseau
-
-resource "azurerm_virtual_network" "reseauRyan" {
-  name                = "reseauRyan"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
+# Create virtual network
+resource "azurerm_virtual_network" "my_terraform_network" {
+  name                = "myVnet"
   address_space       = ["10.0.0.0/16"]
-}
-#Création de mon sous réseau
-
-resource "azurerm_subnet" "sous_reseauRyan" {
-    name              ="sous_reseauRyan"
-    resource_group_name = azurerm_resource_group.rg.name
-    virtual_network_name = azurerm_virtual_network.reseauRyan.name
-    address_prefixes = ["10.0.2.0/24"]
-}
-#Création de l'adresse ip avec une étiquette DNS
-
-resource "azurerm_public_ip" "mon_ip" {
-    name = "mon_ip"
-    resource_group_name = azurerm_resource_group.rg.name
-    location = azurerm_resource_group.rg.location
-    allocation_method = "Dynamic"
-    domain_name_label = "dnsryan"
-
-    tags = {
-        environment = "production"
-    }
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
 }
 
-#Network security groupe and rules
-
-resource "azurerm_network_security_group" "securitegrp" {
-    name = "securitegroupe"
-    location = azurerm_resource_group.rg.location
-    resource_group_name = azurerm_resource_group.rg.name
-
-    security_rule {
-        name = "SSH"
-        priority = 1001
-        direction = "Inbound"
-        access = "Allow"
-        protocol = "Tcp"
-        source_port_range = "*"
-        destination_port_range = "22"
-        source_address_prefix = "*"
-        destination_address_prefix = "*"
-    }
+# Create subnet
+resource "azurerm_subnet" "my_terraform_subnet" {
+  name                 = "mySubnet"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.my_terraform_network.name
+  address_prefixes     = ["10.0.1.0/24"]
 }
 
-# Création de l'interface réseau
-
-resource "azurerm_network_interface" "interfacereseau" {
-    name = "myNIC"
-    location = azurerm_resource_group.rg.location
-    resource_group_name = azurerm_resource_group.rg.name
-
-    ip_configuration {
-        name = "myNicConfiguration"
-        subnet_id = azurerm_subnet.sous_reseauRyan.id
-        private_ip_address_allocation = "Dynamic"
-        public_ip_address_id = azurerm_public_ip.mon_ip.id
-    }
+# Create public IPs
+resource "azurerm_public_ip" "my_terraform_public_ip" {
+  name                = "myPublicIP"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Dynamic"
 }
 
-#Connection le groupe de securité à l'interface réseau
+# Create Network Security Group and rule
+resource "azurerm_network_security_group" "my_terraform_nsg" {
+  name                = "myNetworkSecurityGroup"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
 
+  security_rule {
+    name                       = "SSH"
+    priority                   = 1001
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+# Create network interface
+resource "azurerm_network_interface" "my_terraform_nic" {
+  name                = "myNIC"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "my_nic_configuration"
+    subnet_id                     = azurerm_subnet.my_terraform_subnet.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.my_terraform_public_ip.id
+  }
+}
+
+# Connect the security group to the network interface
 resource "azurerm_network_interface_security_group_association" "example" {
-  network_interface_id      = azurerm_network_interface.interfacereseau.id
-  network_security_group_id = azurerm_network_security_group.securitegrp.id
+  network_interface_id      = azurerm_network_interface.my_terraform_nic.id
+  network_security_group_id = azurerm_network_security_group.my_terraform_nsg.id
 }
 
-#Création de la machine virutelle
+# Generate random text for a unique storage account name
+resource "random_id" "random_id" {
+  keepers = {
+    # Generate a new ID only when a new resource group is defined
+    resource_group = azurerm_resource_group.rg.name
+  }
 
-resource "azurerm_linux_virtual_machine" "VmRyan" {
-    name = "Ryan"
-    resource_group_name = azurerm_resource_group.rg.name
-    location = azurerm_resource_group.rg.location
-    size = "Standard_F2"
-    admin_username = "Ryano"
-    network_interface_ids = [
-        azurerm_network_interface.interfacereseau.id
-    ]
-    source_image_reference {
-       publisher = "Canonical"
-        offer     = "UbuntuServer"
-        sku       = "16.04-LTS"
-        version   = "latest"
-    }
-    os_disk {
-      storage_account_type = "Standard_LRS"
-      caching              = "ReadWrite"
-    }
+  byte_length = 8
+}
+
+# Create storage account for boot diagnostics
+resource "azurerm_storage_account" "my_storage_account" {
+  name                     = "diag${random_id.random_id.hex}"
+  location                 = azurerm_resource_group.rg.location
+  resource_group_name      = azurerm_resource_group.rg.name
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+# Create (and display) an SSH key
+resource "tls_private_key" "example_ssh" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Create virtual machine
+resource "azurerm_linux_virtual_machine" "my_terraform_vm" {
+  name                  = "myVM"
+  location              = azurerm_resource_group.rg.location
+  resource_group_name   = azurerm_resource_group.rg.name
+  network_interface_ids = [azurerm_network_interface.my_terraform_nic.id]
+  size                  = "Standard_DS1_v2"
+
+  os_disk {
+    name                 = "myOsDisk"
+    caching              = "ReadWrite"
+    storage_account_type = "Premium_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "UbuntuServer"
+    sku       = "18.04-LTS"
+    version   = "latest"
+  }
+
+  computer_name                   = "myvm"
+  admin_username                  = "azureuser"
+  disable_password_authentication = true
+
+  admin_ssh_key {
+    username   = "azureuser"
+    public_key = tls_private_key.example_ssh.public_key_openssh
+  }
+
+  boot_diagnostics {
+    storage_account_uri = azurerm_storage_account.my_storage_account.primary_blob_endpoint
+  }
 }
