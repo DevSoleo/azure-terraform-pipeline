@@ -1,6 +1,6 @@
-variable "resource_group_location" {
+variable "resources_location" {
   default     = "eastus"
-  description = "Location of the resource group."
+  description = "Resources location"
 }
 
 variable "resource_group_name_prefix" {
