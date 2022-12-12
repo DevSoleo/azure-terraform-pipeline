@@ -4,7 +4,7 @@ resource "random_pet" "rg_name" {
 
 # Create a Resource Group
 resource "azurerm_resource_group" "my_rg" {
-  name = random_pet.rg_name.id # rgchien
+  name     = random_pet.rg_name.id
   location = var.resources_location
   tags = {
     env    = "dev"
