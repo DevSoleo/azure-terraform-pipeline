@@ -1,9 +1,6 @@
 name: 'Terraform 2'
 on: push
 
-defaults:
-  run:
-    working-directory: "./terraform"
 permissions:
   pull-requests: write
   id-token: write
@@ -20,7 +17,7 @@ jobs:
     
     defaults:
       run:
-        shell: bash
+        working-directory: "./terraform"
     
     steps:
     - uses: actions/checkout@v2
