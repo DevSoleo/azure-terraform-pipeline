@@ -1,4 +1,4 @@
-name: 'Terraform 2'
+name: 'Terraform'
 on: push
 
 permissions:
